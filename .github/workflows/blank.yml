@@ -1,0 +1,47 @@
+
+name: Preparar PC Gamer
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/setup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Verificar scripts do Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Verificar scripts PowerShell
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem "./scripts" -Filter "*.ps1" -Recurse -ErrorAction SilentlyContinue
+
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error $_ }
+              throw "Erro no arquivo $($file.Name)"
+            }
+
+            Write-Host "OK: $($file.Name)"
+          }
+
+          Write-Host "Verificação concluída!"
+          
